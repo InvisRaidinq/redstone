@@ -22,7 +22,6 @@ public class ConnectionManager {
 
     private static final Gson GSON = new GsonBuilder().create();
     private static final String CLASS_IDENTIFIER = "redstone-packet-class";
-    private static final String DATA_IDENTIFIER = "redstone-packet-data";
 
     public ConnectionManager(JedisPool jedisPool, String channel) {
         this.jedisPool = jedisPool;
