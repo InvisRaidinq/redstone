@@ -1,6 +1,8 @@
 package xyz.invisraidinq.redstone;
 
 import java.util.Objects;
+
+import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.Protocol;
 import xyz.invisraidinq.redstone.manager.connection.ConnectionManager;
@@ -12,7 +14,7 @@ public class RedstoneInitializer implements Redstone {
 
     private RedstoneInitializer(Builder builder) {
         final JedisPool jedisPool = this.initPool(builder);
-        this.connectionManager = new ConnectionManager(jedisPool, builder.channel);
+        this.connectionManager = new ConnectionManager(getSingleConnection(builder), jedisPool, builder.channel);
     }
 
     @Override
@@ -31,6 +33,18 @@ public class RedstoneInitializer implements Redstone {
             builder.authCredentials.getUsername(),
             builder.authCredentials.getPassword()
         );
+    }
+
+    private Jedis getSingleConnection(Builder builder){
+        Jedis jedis = new Jedis(builder.address, builder.port);
+        if(builder.authCredentials.getPassword() != null && builder.authCredentials.getUsername() != null){
+            jedis.auth(builder.authCredentials.getUsername(), builder.authCredentials.getPassword());
+        } else {
+            if(builder.authCredentials.getPassword() != null){
+                jedis.auth(builder.authCredentials.getPassword());
+            }
+        }
+        return jedis;
     }
 
     public static class Builder {
@@ -65,5 +79,6 @@ public class RedstoneInitializer implements Redstone {
 
             return new RedstoneInitializer(this);
         }
+
     }
 }

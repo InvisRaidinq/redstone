@@ -9,10 +9,13 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
+
+import lombok.Builder;
 import lombok.SneakyThrows;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPubSub;
+import xyz.invisraidinq.redstone.RedstoneInitializer;
 import xyz.invisraidinq.redstone.packet.RedstonePacket;
 
 public class ConnectionManager {
@@ -22,11 +25,12 @@ public class ConnectionManager {
 
     private static final Gson GSON = new GsonBuilder().create();
     private static final String CLASS_IDENTIFIER = "redstone-packet-class";
+    private final Jedis pubConnection;
 
-    public ConnectionManager(JedisPool jedisPool, String channel) {
+    public ConnectionManager(Jedis singleConn, JedisPool jedisPool, String channel) {
+        this.pubConnection = singleConn;
         this.jedisPool = jedisPool;
         this.channel = channel;
-
         this.initSubscription();
     }
 
@@ -49,14 +53,11 @@ public class ConnectionManager {
             if (jedis == null) {
                 throw new IllegalStateException("Failed to handle Jedis event");
             }
-
             consumer.accept(jedis);
         }
     }
 
     private void initSubscription() {
-        final Jedis jedis = this.jedisPool.getResource();
-
         // Handle messages on a separate messaging thread
         new Thread(() -> {
             final JedisPubSub jedisPubSub = new JedisPubSub() {
@@ -74,8 +75,8 @@ public class ConnectionManager {
                     redstonePacket.onReceive();
                 }
             };
-
-            jedis.subscribe(jedisPubSub, this.channel);
+            pubConnection.getClient().setTimeoutInfinite();
+            pubConnection.subscribe(jedisPubSub, this.channel);
         }).start();
     }
 
